@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .endpoint {
+            background-color: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        code {
+            background-color: #e0e0e0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat App API</h1>
+    <p>Welcome to the Chat App API. This is the backend service for the real-time chat application.</p>
+    
+    <h2>Available Endpoints:</h2>
+    
+    <div class="endpoint">
+        <h3>Authentication</h3>
+        <p><code>POST /api-auth/login/</code> - Login endpoint</p>
+        <p><code>POST /api-auth/logout/</code> - Logout endpoint</p>
+    </div>
+
+    <div class="endpoint">
+        <h3>Users</h3>
+        <p><code>GET /api/users/</code> - List all users</p>
+        <p><code>GET /api/users/{id}/</code> - Get user details</p>
+    </div>
+
+    <div class="endpoint">
+        <h3>Chat Rooms</h3>
+        <p><code>GET /api/chat-rooms/</code> - List user's chat rooms</p>
+        <p><code>POST /api/chat-rooms/</code> - Create new chat room</p>
+        <p><code>GET /api/chat-rooms/{id}/</code> - Get chat room details</p>
+        <p><code>POST /api/chat-rooms/{id}/mark_messages_read/</code> - Mark messages as read</p>
+    </div>
+
+    <div class="endpoint">
+        <h3>Messages</h3>
+        <p><code>GET /api/messages/</code> - List messages (filtered by chat room)</p>
+        <p><code>POST /api/messages/</code> - Send new message</p>
+    </div>
+
+    <div class="endpoint">
+        <h3>WebSocket</h3>
+        <p><code>ws://localhost:8000/ws/chat/{room_id}/</code> - WebSocket endpoint for real-time chat</p>
+    </div>
+
+    <p>For the frontend application, please visit <a href="http://localhost:3000">http://localhost:3000</a></p>
+</body>
+</html> 
