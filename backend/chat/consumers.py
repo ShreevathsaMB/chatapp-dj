@@ -68,7 +68,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def verify_room_access(self):
         try:
             room = ChatRoom.objects.get(id=self.room_id)
-            has_access = room.participants.filter(id=self.user.id).exists() or room.created_by_id == self.user.id
+            has_access = room.users.filter(id=self.user.id).exists()
             logger.info(f"Room access check for user {self.user.username}: {'granted' if has_access else 'denied'}")
             return has_access
         except ChatRoom.DoesNotExist:
@@ -136,7 +136,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
         except Exception as e:
-            print(f"Error processing message: {str(e)}")
+            logger.error(f"Error processing message: {str(e)}")
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': str(e)
@@ -185,4 +185,4 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if message.sender != self.user:
             message.is_read = True
             message.read_by.add(self.user)
-            message.save() 
+            message.save()
