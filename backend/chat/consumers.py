@@ -22,7 +22,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         logger.info(f"WebSocket connection attempt to room {self.room_id}")
         
         if not token:
-            logger.error("No authentication token provided")
+            logger.error(f"WebSocket connection failed: No token provided for room {self.room_id}")
             await self.close(code=4401)
             return
 

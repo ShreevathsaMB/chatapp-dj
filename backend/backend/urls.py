@@ -34,9 +34,31 @@ def get_csrf_token(request):
 def home(request):
     # If user is authenticated, they can access the chat interface
     if request.user.is_authenticated:
-        return JsonResponse({'message': 'Welcome to the chat API'})
-    # If not authenticated, redirect to login
-    return redirect('login')
+        return JsonResponse({
+            'message': 'Welcome to the chat API',
+            'user': {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email
+            },
+            'available_endpoints': [
+                'GET /api/chat-rooms/ - List chat rooms',
+                'GET /api/messages/ - List messages',
+                'GET /api/users/ - List users',
+                'POST /api/logout/ - Logout'
+            ]
+        })
+    # If not authenticated, provide login information instead of redirect
+    return JsonResponse({
+        'message': 'Chat API - Authentication required',
+        'login_endpoint': '/api/login/',
+        'instructions': 'POST to /api/login/ with username and password',
+        'test_users': [
+            {'username': 'john_doe', 'password': 'testpass123'},
+            {'username': 'jane_smith', 'password': 'testpass123'},
+            {'username': 'bob_wilson', 'password': 'testpass123'}
+        ]
+    })
 
 urlpatterns = [
     path('', home, name='home'),

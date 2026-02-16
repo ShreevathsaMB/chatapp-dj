@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 
 class ChatRoom(models.Model):
     users = models.ManyToManyField(User, related_name='chat_rooms')
+    admin = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='administered_rooms')
     created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255, blank=True, null=True)
     is_group_chat = models.BooleanField(default=False)

@@ -20,7 +20,7 @@ def home(request):
 
 # Create your views here.
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
     queryset = User.objects.filter(is_active=True)
@@ -29,10 +29,17 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         # Get all active users except the current user
         return User.objects.filter(is_active=True).exclude(id=self.request.user.id).order_by('username')
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'patch', 'put'])
     def me(self, request):
-        serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        if request.method == 'GET':
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data)
+        
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class ChatRoomViewSet(viewsets.ModelViewSet):
@@ -43,7 +50,11 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         return ChatRoom.objects.filter(users=self.request.user)
 
     def perform_create(self, serializer):
-        chat_room = serializer.save()
+        is_group_chat = self.request.data.get('is_group_chat', False)
+        if not is_group_chat and self.request.data.get('name'):
+            is_group_chat = True
+            
+        chat_room = serializer.save(admin=self.request.user, is_group_chat=is_group_chat)
         chat_room.users.add(self.request.user)
         for user_id in self.request.data.get('users', []):
             try:
@@ -74,6 +85,43 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'messages marked as read'})
 
+    @action(detail=True, methods=['post'])
+    def add_member(self, request, pk=None):
+        chat_room = self.get_object()
+        if chat_room.admin != request.user:
+            return Response({'error': 'Only the admin can add members.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        user_id = request.data.get('user_id')
+        try:
+            user = User.objects.get(id=user_id)
+            chat_room.users.add(user)
+            return Response({'status': 'Member added successfully.'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
+    def remove_member(self, request, pk=None):
+        chat_room = self.get_object()
+        if chat_room.admin != request.user:
+            return Response({'error': 'Only the admin can remove members.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        user_id = request.data.get('user_id')
+        if user_id == chat_room.admin.id:
+            return Response({'error': 'Admin cannot remove themselves.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            user = User.objects.get(id=user_id)
+            chat_room.users.remove(user)
+            return Response({'status': 'Member removed successfully.'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_group_chat and instance.admin != request.user:
+            return Response({'error': 'Only the admin can delete this group.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -95,43 +143,63 @@ def get_csrf_token(request):
     return JsonResponse({'detail': 'CSRF cookie set'})
 
 @ensure_csrf_cookie
-@require_http_methods(["POST"])
 def login_view(request):
-    try:
-        data = json.loads(request.body)
-        username = data.get('username')
-        password = data.get('password')
-        
-        if not username or not password:
-            return JsonResponse({
-                'detail': 'Please provide both username and password'
-            }, status=400)
-        
-        user = authenticate(request, username=username, password=password)
-        
-        if user is not None and user.is_active:
-            login(request, user)
-            return JsonResponse({
-                'detail': 'Successfully logged in.',
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                }
-            })
-        else:
-            return JsonResponse({
-                'detail': 'Invalid credentials'
-            }, status=401)
+    if request.method == 'GET':
+        # Return login page info for GET requests
+        return JsonResponse({
+            'message': 'Login endpoint - POST username and password as JSON',
+            'example': {
+                'username': 'your_username',
+                'password': 'your_password'
+            },
+            'available_test_users': [
+                {'username': 'john_doe', 'password': 'testpass123'},
+                {'username': 'jane_smith', 'password': 'testpass123'},
+                {'username': 'bob_wilson', 'password': 'testpass123'}
+            ]
+        })
+    
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            password = data.get('password')
             
-    except json.JSONDecodeError:
+            if not username or not password:
+                return JsonResponse({
+                    'detail': 'Please provide both username and password'
+                }, status=400)
+            
+            user = authenticate(request, username=username, password=password)
+            
+            if user is not None and user.is_active:
+                login(request, user)
+                return JsonResponse({
+                    'detail': 'Successfully logged in.',
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                    }
+                })
+            else:
+                return JsonResponse({
+                    'detail': 'Invalid credentials'
+                }, status=401)
+                
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'detail': 'Invalid JSON data'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'detail': str(e)
+            }, status=500)
+    
+    else:
         return JsonResponse({
-            'detail': 'Invalid JSON data'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'detail': str(e)
-        }, status=500)
+            'detail': 'Method not allowed'
+        }, status=405)
 
 @require_http_methods(["POST"])
 def logout_view(request):
