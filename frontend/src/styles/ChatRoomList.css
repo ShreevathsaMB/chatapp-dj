@@ -1,0 +1,49 @@
+.chat-room-list {
+  width: 300px;
+  height: 100vh;
+  border-right: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+}
+
+.room-list {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.user-profile-sidebar {
+  margin-top: auto;
+  background-color: #fcfcfc;
+}
+
+.room-item {
+  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.2s;
+}
+
+.room-item:hover {
+  background-color: #f8f9fa !important;
+}
+
+.room-avatar {
+  background-color: #1976d2 !important;
+}
+
+/* Scrollbar styling for room list */
+.room-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.room-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.room-list::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
+}
+
+.room-list::-webkit-scrollbar-thumb:hover {
+  background: #ccc;
+}
